@@ -1,0 +1,13 @@
+# Ignore everything except backend
+*
+!backend/
+!backend/**
+
+# Ignore node_modules and other heavy folders
+frontend/node_modules/
+ml/
+var-backend/
+var-frontend/
+.git/
+*.md
+docker-compose.yml
