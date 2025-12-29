@@ -93,11 +93,15 @@ def analyze_video(video_file, analysis_type="both"):
     try:
         var = get_analyzer()
         
+        print(f"[DEBUG] Analyzing video: {video_file}")
+        
         # Run analysis
         results = var.analyze(
             video_path=video_file,
             create_video=True
         )
+        
+        print(f"[DEBUG] Analysis results: {results}")
         
         # Format results based on analysis_type
         handball_events = results.get("handball", [])
@@ -118,17 +122,31 @@ def analyze_video(video_file, analysis_type="both"):
             "summary": results.get("summary", {})
         }
         
-        # Find output video
+        # Find output video - check multiple possible locations
         video_stem = Path(video_file).stem
-        video_path = f"results/{video_stem}_VAR.mp4"
-        if os.path.exists(video_path):
-            return output, video_path
+        possible_paths = [
+            f"results/{video_stem}_VAR.mp4",
+            f"data/results/{video_stem}_VAR.mp4",
+            Path("results") / f"{video_stem}_VAR.mp4",
+        ]
         
-        return output, None
+        video_path = None
+        for p in possible_paths:
+            if os.path.exists(str(p)):
+                video_path = str(p)
+                print(f"[DEBUG] Found video at: {video_path}")
+                break
+        
+        if video_path is None:
+            print(f"[DEBUG] No video found. Checked: {possible_paths}")
+        
+        return output, video_path
         
     except Exception as e:
         import traceback
-        return {"error": str(e), "traceback": traceback.format_exc()}, None
+        error_msg = traceback.format_exc()
+        print(f"[ERROR] Analysis failed: {error_msg}")
+        return {"error": str(e), "traceback": error_msg}, None
 
 
 def create_interface():

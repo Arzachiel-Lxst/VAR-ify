@@ -172,11 +172,11 @@ class VARSystem:
             json.dump(result, f, indent=2, ensure_ascii=False)
         print(f"\n📄 JSON saved: {json_path}")
         
-        # Create video with intro + highlights
-        if create_video and (handball_events or offside_events):
+        # Create video with intro + highlights (ALWAYS create video)
+        if create_video:
             video_output = self.output_dir / f"{video_path.stem}_VAR.mp4"
             temp_output = self.output_dir / f"{video_path.stem}_VAR_temp.avi"
-            print(f"\n🎬 Creating VAR video with highlights...")
+            print(f"\n🎬 Creating VAR video...")
             
             # Create video with OpenCV (intro + clips)
             self._create_var_video(str(video_path), handball_events, offside_events, str(temp_output))

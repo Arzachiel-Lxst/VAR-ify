@@ -63,16 +63,7 @@ class BallTracker:
         ball_mask = cv2.morphologyEx(ball_mask, cv2.MORPH_CLOSE, kernel)
         ball_mask = cv2.morphologyEx(ball_mask, cv2.MORPH_OPEN, kernel)
         
-        # Motion detection for moving ball
-        motion_mask = None
-        if self.prev_gray is not None:
-            diff = cv2.absdiff(self.prev_gray, gray)
-            _, motion_mask = cv2.threshold(diff, 25, 255, cv2.THRESH_BINARY)
-            motion_mask = cv2.dilate(motion_mask, np.ones((5, 5), np.uint8))
-            
-            # Combine with color mask - ball should be white AND moving
-            ball_mask = cv2.bitwise_and(ball_mask, motion_mask)
-        
+        # Motion detection - OPTIONAL, don't require it
         self.prev_gray = gray.copy()
         
         # Find contours
@@ -83,11 +74,11 @@ class BallTracker:
         
         for cnt in contours:
             area = cv2.contourArea(cnt)
-            if area < 60 or area > 3500:
+            if area < 30 or area > 5000:  # More permissive
                 continue
             
             (x, y), radius = cv2.minEnclosingCircle(cnt)
-            if radius < 5 or radius > 45:
+            if radius < 3 or radius > 60:  # More permissive
                 continue
             
             perimeter = cv2.arcLength(cnt, True)
@@ -96,7 +87,7 @@ class BallTracker:
             
             circularity = 4 * np.pi * area / (perimeter ** 2)
             
-            if circularity > 0.5:
+            if circularity > 0.35:  # More permissive
                 # Score based on circularity and trajectory consistency
                 score = circularity
                 
@@ -247,11 +238,11 @@ class ContactDetector:
     def __init__(self):
         self.ball_tracker = BallTracker()
         self.hand_detector = HandDetector()
-        self.contact_distance = 45  # pixels - increased for better detection
+        self.contact_distance = 60  # pixels - very permissive for detection
         self.prev_ball = None
-        self.min_ball_speed = 3  # Ball must be moving (lowered for sensitivity)
+        self.min_ball_speed = 0  # No minimum speed - detect stationary ball too
         self.trajectory_history = []  # Track ball movement for validation
-        self.min_confidence = 0.55  # Minimum confidence for detection (lowered)
+        self.min_confidence = 0.40  # Very low threshold for more detections
     
     def detect_contact(self, frame: np.ndarray, frame_idx: int, fps: float) -> Optional[ContactEvent]:
         """
@@ -269,11 +260,8 @@ class ContactDetector:
             self.prev_ball = None
             return None
         
-        # Ball must be moving significantly
+        # Calculate speed but don't require minimum
         speed = np.sqrt(ball.vx**2 + ball.vy**2)
-        if speed < self.min_ball_speed:  # Too slow, probably not in play
-            self.prev_ball = ball
-            return None
         
         # Track trajectory for validation
         self.trajectory_history.append({
