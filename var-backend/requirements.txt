@@ -25,7 +25,7 @@ ultralytics==8.1.0
 mediapipe==0.10.9
 
 # Tracking
-lap==0.4.0
+lapx>=0.5.2
 filterpy==1.4.5
 
 # Database
