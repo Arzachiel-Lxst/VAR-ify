@@ -1,7 +1,7 @@
 FROM python:3.11-slim
 
-# Cache bust: v2
-ARG CACHEBUST=1
+# Cache bust: v3 - force rebuild with lapx
+ARG CACHEBUST=3
 
 WORKDIR /app
 
