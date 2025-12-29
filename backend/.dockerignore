@@ -5,27 +5,15 @@ __pycache__
 .env.*
 .git
 .gitignore
-*.md
-data/uploads/*
-data/results/*
-!data/uploads/.gitkeep
-!data/results/.gitkeep
 .vscode
 .idea
 *.log
 
-# Exclude ML models and heavy files
+# Exclude ML models
 *.pt
 *.pth
 *.onnx
-models/
-weights/
 
 # Exclude test files
 tests/
 test_*.py
-*_test.py
-
-# Exclude local development files
-docker-compose.yml
-Dockerfile.local
