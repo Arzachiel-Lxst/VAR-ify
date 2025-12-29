@@ -4,6 +4,11 @@
 # Gradio UI
 gradio>=4.0.0
 
+# API Server
+fastapi
+uvicorn[standard]
+python-multipart
+
 # Video & Computer Vision
 opencv-python-headless==4.9.0.80
 ffmpeg-python==0.2.0

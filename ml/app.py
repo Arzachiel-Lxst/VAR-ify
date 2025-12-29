@@ -6,10 +6,23 @@ Video Assistant Referee Analysis with YOLOv8 and MediaPipe
 import os
 import tempfile
 import gradio as gr
+from fastapi import FastAPI, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pathlib import Path
+import shutil
 
 # Import VAR system
 from run_var import VARSystem
+
+# Initialize FastAPI for API endpoints
+api_app = FastAPI()
+api_app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Initialize analyzer
 analyzer = None
@@ -19,6 +32,48 @@ def get_analyzer():
     if analyzer is None:
         analyzer = VARSystem(output_dir="results")
     return analyzer
+
+
+@api_app.post("/api/analyze")
+async def api_analyze(video: UploadFile = File(...)):
+    """API endpoint for backend to call"""
+    # Save uploaded video
+    upload_dir = Path("uploads")
+    upload_dir.mkdir(exist_ok=True)
+    
+    video_path = upload_dir / video.filename
+    with open(video_path, "wb") as f:
+        shutil.copyfileobj(video.file, f)
+    
+    try:
+        var = get_analyzer()
+        results = var.analyze(str(video_path), create_video=True)
+        
+        handball_events = results.get("handball", [])
+        offside_events = results.get("offside", [])
+        
+        # Find output video
+        video_stem = video_path.stem
+        result_video = f"results/{video_stem}_VAR.mp4"
+        
+        return {
+            "success": True,
+            "handball_events": len(handball_events),
+            "offside_events": len(offside_events),
+            "handball_details": handball_events,
+            "offside_details": offside_events,
+            "video_url": result_video if os.path.exists(result_video) else None,
+            "summary": results.get("summary", {})
+        }
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": str(e)}
+        )
+    finally:
+        # Cleanup uploaded file
+        if video_path.exists():
+            video_path.unlink()
 
 
 def analyze_video(video_file, analysis_type="both"):
@@ -127,4 +182,8 @@ def create_interface():
 
 if __name__ == "__main__":
     demo = create_interface()
-    demo.launch(server_name="0.0.0.0", server_port=7860, share=False)
+    # Mount FastAPI app for API endpoints
+    app = gr.mount_gradio_app(api_app, demo, path="/")
+    
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=7860)
