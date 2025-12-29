@@ -172,6 +172,8 @@ async def analyze_video(request: AnalyzeRequest):
     Analyze video for VAR violations.
     Calls Hugging Face ML service if configured, otherwise returns mock data.
     """
+    import base64
+    
     file_path = UPLOAD_DIR / request.filename
     
     if not file_path.exists():
@@ -180,7 +182,8 @@ async def analyze_video(request: AnalyzeRequest):
     # If HF_SPACE_URL is configured, call the ML service
     if HF_SPACE_URL:
         try:
-            async with httpx.AsyncClient(timeout=120.0) as client:
+            print(f"[Backend] Calling ML service: {HF_SPACE_URL}")
+            async with httpx.AsyncClient(timeout=300.0) as client:
                 # Upload video to HF Space for analysis
                 with open(file_path, "rb") as f:
                     files = {"video": (request.filename, f, "video/mp4")}
@@ -189,19 +192,42 @@ async def analyze_video(request: AnalyzeRequest):
                         files=files
                     )
                 
+                print(f"[Backend] ML response status: {response.status_code}")
+                
                 if response.status_code == 200:
                     result = response.json()
+                    print(f"[Backend] ML result keys: {result.keys()}")
+                    
+                    # Save video from base64 if provided
+                    video_url = None
+                    if result.get("video_base64"):
+                        video_stem = file_path.stem
+                        result_video = f"{video_stem}_VAR.mp4"
+                        result_path = RESULTS_DIR / result_video
+                        
+                        # Decode and save video
+                        video_bytes = base64.b64decode(result["video_base64"])
+                        with open(result_path, "wb") as vf:
+                            vf.write(video_bytes)
+                        print(f"[Backend] Video saved: {result_path}")
+                        video_url = f"/results/{result_video}"
+                    
                     return {
                         "success": True,
                         "filename": request.filename,
                         "handball_events": result.get("handball_events", 0),
                         "offside_events": result.get("offside_events", 0),
-                        "violations": result.get("violations", []),
-                        "video_url": result.get("video_url"),
+                        "handball": result.get("handball", []),
+                        "offside": result.get("offside", []),
+                        "video_url": video_url,
+                        "summary": result.get("summary", {}),
                         "source": "ml_service"
                     }
+                else:
+                    print(f"[Backend] ML error response: {response.text}")
         except Exception as e:
-            print(f"ML service error: {e}")
+            import traceback
+            print(f"[Backend] ML service error: {traceback.format_exc()}")
     
     # Fallback: Return demo analysis result
     video_stem = file_path.stem
@@ -212,9 +238,11 @@ async def analyze_video(request: AnalyzeRequest):
         "filename": request.filename,
         "handball_events": 0,
         "offside_events": 0,
-        "violations": [],
+        "handball": [],
+        "offside": [],
         "video_url": f"/results/{result_video}" if (RESULTS_DIR / result_video).exists() else None,
-        "message": "Analysis complete. ML service not configured - using demo mode.",
+        "summary": {"total_violations": 0},
+        "message": "Analysis complete. ML service not configured or failed - using demo mode.",
         "source": "demo"
     }
 

@@ -8,9 +8,10 @@ import tempfile
 import gradio as gr
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from pathlib import Path
 import shutil
+import base64
 
 # Import VAR system
 from run_var import VARSystem
@@ -47,28 +48,41 @@ async def api_analyze(video: UploadFile = File(...)):
     
     try:
         var = get_analyzer()
+        print(f"[ML API] Analyzing: {video_path}")
         results = var.analyze(str(video_path), create_video=True)
+        print(f"[ML API] Results: {results}")
         
         handball_events = results.get("handball", [])
         offside_events = results.get("offside", [])
         
-        # Find output video
+        # Find output video and encode as base64
         video_stem = video_path.stem
-        result_video = f"results/{video_stem}_VAR.mp4"
+        result_video_path = Path(f"results/{video_stem}_VAR.mp4")
+        
+        video_base64 = None
+        if result_video_path.exists():
+            print(f"[ML API] Video found: {result_video_path}")
+            with open(result_video_path, "rb") as vf:
+                video_base64 = base64.b64encode(vf.read()).decode('utf-8')
+            print(f"[ML API] Video encoded, size: {len(video_base64)} chars")
+        else:
+            print(f"[ML API] Video NOT found at: {result_video_path}")
         
         return {
             "success": True,
             "handball_events": len(handball_events),
             "offside_events": len(offside_events),
-            "handball_details": handball_events,
-            "offside_details": offside_events,
-            "video_url": result_video if os.path.exists(result_video) else None,
+            "handball": handball_events,
+            "offside": offside_events,
+            "video_base64": video_base64,
             "summary": results.get("summary", {})
         }
     except Exception as e:
+        import traceback
+        print(f"[ML API] Error: {traceback.format_exc()}")
         return JSONResponse(
             status_code=500,
-            content={"error": str(e)}
+            content={"error": str(e), "traceback": traceback.format_exc()}
         )
     finally:
         # Cleanup uploaded file
