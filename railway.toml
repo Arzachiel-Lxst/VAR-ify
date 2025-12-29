@@ -1,9 +1,9 @@
 [build]
 builder = "dockerfile"
-dockerfilePath = "backend/Dockerfile"
+dockerfilePath = "Dockerfile"
+buildContext = "backend"
 watchPatterns = ["backend/**"]
 
 [deploy]
-startCommand = "uvicorn api_server:app --host 0.0.0.0 --port $PORT"
 healthcheckPath = "/api/health"
 restartPolicyType = "on_failure"
