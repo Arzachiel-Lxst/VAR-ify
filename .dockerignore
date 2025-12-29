@@ -1,13 +1,33 @@
-# Ignore everything except backend
-*
-!backend/
-!backend/**
+# Git
+.git/
+.gitignore
 
-# Ignore node_modules and other heavy folders
-frontend/node_modules/
+# Frontend and ML (not needed for backend)
+frontend/
 ml/
 var-backend/
 var-frontend/
-.git/
+
+# Node modules
+node_modules/
+
+# Docs
 *.md
+
+# Docker compose (not needed for Railway)
 docker-compose.yml
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Env files
+.env
+.env.*
+
+# Data files
+backend/data/uploads/*
+backend/data/results/*
+!backend/data/uploads/.gitkeep
+!backend/data/results/.gitkeep
