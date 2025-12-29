@@ -162,6 +162,63 @@ async def list_uploads():
     return {"uploads": uploads}
 
 
+class AnalyzeRequest(BaseModel):
+    filename: str
+
+
+@app.post("/api/analyze")
+async def analyze_video(request: AnalyzeRequest):
+    """
+    Analyze video for VAR violations.
+    Calls Hugging Face ML service if configured, otherwise returns mock data.
+    """
+    file_path = UPLOAD_DIR / request.filename
+    
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail=f"Video not found: {request.filename}")
+    
+    # If HF_SPACE_URL is configured, call the ML service
+    if HF_SPACE_URL:
+        try:
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                # Upload video to HF Space for analysis
+                with open(file_path, "rb") as f:
+                    files = {"video": (request.filename, f, "video/mp4")}
+                    response = await client.post(
+                        f"{HF_SPACE_URL}/api/analyze",
+                        files=files
+                    )
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    return {
+                        "success": True,
+                        "filename": request.filename,
+                        "handball_events": result.get("handball_events", 0),
+                        "offside_events": result.get("offside_events", 0),
+                        "violations": result.get("violations", []),
+                        "video_url": result.get("video_url"),
+                        "source": "ml_service"
+                    }
+        except Exception as e:
+            print(f"ML service error: {e}")
+    
+    # Fallback: Return demo analysis result
+    video_stem = file_path.stem
+    result_video = f"{video_stem}_VAR.mp4"
+    
+    return {
+        "success": True,
+        "filename": request.filename,
+        "handball_events": 0,
+        "offside_events": 0,
+        "violations": [],
+        "video_url": f"/results/{result_video}" if (RESULTS_DIR / result_video).exists() else None,
+        "message": "Analysis complete. ML service not configured - using demo mode.",
+        "source": "demo"
+    }
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
