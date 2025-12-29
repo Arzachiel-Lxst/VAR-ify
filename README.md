@@ -1,5 +1,45 @@
 # VAR-ify ⚽
 
+Video Assistant Referee Analysis System using AI
+
+## Architecture
+
+```
+VAR-ify/
+├── frontend/    → Deploy to Vercel
+├── backend/     → Deploy to Railway  
+└── ml/          → Deploy to Hugging Face Spaces
+```
+
+## Services
+
+| Service | Platform | Description |
+|---------|----------|-------------|
+| **Frontend** | Vercel | React UI for video upload |
+| **Backend** | Railway | FastAPI for file handling |
+| **ML** | Hugging Face | YOLOv8 + MediaPipe analysis |
+
+## Quick Deploy
+
+### 1. ML Service (Hugging Face)
+1. Create new Space → Select Gradio SDK
+2. Upload `ml/` folder contents
+3. Note your Space URL
+
+### 2. Backend (Railway)
+1. New Project → Deploy from GitHub
+2. Set root directory: `backend`
+3. Add env: `HF_SPACE_URL=https://your-space.hf.space`
+
+### 3. Frontend (Vercel)
+1. Import from GitHub
+2. Set root directory: `frontend`
+3. Add env: `VITE_API_URL=https://your-backend.railway.app`
+
+---
+
+# VAR-ify ⚽
+
 **Video Assistant Referee Analysis System**
 
 Sistem analisis video sepak bola berbasis AI untuk mendeteksi pelanggaran Handball dan Offside secara otomatis.

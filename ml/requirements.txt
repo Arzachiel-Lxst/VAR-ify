@@ -1,0 +1,26 @@
+# VAR-ify ML Service - Hugging Face Spaces
+# Python 3.10+
+
+# Gradio UI
+gradio>=4.0.0
+
+# Video & Computer Vision
+opencv-python-headless==4.9.0.80
+ffmpeg-python==0.2.0
+numpy==1.26.3
+scipy==1.12.0
+
+# Deep Learning (CPU for HF Spaces free tier)
+torch
+torchvision
+ultralytics==8.1.0
+
+# Pose Estimation
+mediapipe==0.10.9
+
+# Tracking
+lapx>=0.5.2
+filterpy==1.4.5
+
+# Utilities
+pillow==10.2.0
