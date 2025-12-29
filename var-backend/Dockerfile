@@ -1,5 +1,8 @@
 FROM python:3.11-slim
 
+# Cache bust: v2
+ARG CACHEBUST=1
+
 WORKDIR /app
 
 # Install system dependencies
