@@ -2,6 +2,7 @@ __pycache__
 *.pyc
 *.pyo
 .env
+.env.*
 .git
 .gitignore
 *.md
@@ -12,3 +13,22 @@ data/results/*
 .vscode
 .idea
 *.log
+
+# Exclude ML models and heavy files
+*.pt
+*.pth
+*.onnx
+models/
+weights/
+
+# Exclude test files
+tests/
+test_*.py
+*_test.py
+
+# Exclude full requirements (use railway version)
+requirements.txt
+
+# Exclude local development files
+docker-compose.yml
+Dockerfile.local

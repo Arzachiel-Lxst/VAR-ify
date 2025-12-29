@@ -1,29 +1,19 @@
 FROM python:3.11-slim
 
-# Cache bust: v3 - force rebuild with lapx
-ARG CACHEBUST=3
-
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
+# Install system dependencies (minimal)
+RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
-    libgl1 \
     libglib2.0-0 \
-    libsm6 \
-    libxext6 \
-    libxrender-dev \
-    libgomp1 \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
-# Copy requirements first for caching
-COPY requirements.txt .
+# Copy lightweight requirements
+COPY requirements-railway.txt .
 
-# Install numpy first (required by lap package during build)
-RUN pip install --no-cache-dir numpy==1.26.3
-
-# Install remaining requirements
-RUN pip install --no-cache-dir -r requirements.txt
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements-railway.txt
 
 # Copy application code
 COPY . .

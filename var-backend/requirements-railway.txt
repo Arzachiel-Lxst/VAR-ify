@@ -1,0 +1,23 @@
+# VAR Backend API - Lightweight (Railway Deploy)
+# ML processing done separately
+
+# Web Framework
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+python-multipart==0.0.6
+
+# Video Processing (lightweight)
+opencv-python-headless==4.9.0.80
+ffmpeg-python==0.2.0
+numpy==1.26.3
+pillow==10.2.0
+
+# Database
+sqlalchemy==2.0.25
+psycopg2-binary==2.9.9
+
+# Utilities
+pydantic==2.5.3
+pydantic-settings==2.1.0
+python-dotenv==1.0.0
+aiofiles==23.2.1
