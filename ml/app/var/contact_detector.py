@@ -351,9 +351,9 @@ class ContactVARAnalyzer:
     
     # Known false positive timestamps from training data (per video)
     # System learns from user corrections - add video name and timestamps
-    KNOWN_FALSE_POSITIVES = {
-        "0 IQ Handball Moments in Football": [19.90],  # User confirmed not handball
-        "WTF.. bagaimana bisa Offside": [2.03, 5.70],  # False positive - no actual handball
+    KNOWN_FALSE_POSITIVES = {} if os.getenv("HAND_FALSE_DISABLE", "0") == "1" else {
+        "0 IQ Handball Moments in Football": [19.90],
+        "WTF.. bagaimana bisa Offside": [2.03, 5.70],
     }
     
     def __init__(self):

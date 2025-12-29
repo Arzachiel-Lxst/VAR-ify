@@ -7,6 +7,7 @@ import numpy as np
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 from pathlib import Path
+import os
 
 try:
     from ultralytics import YOLO
@@ -33,6 +34,7 @@ class PlayerDetector:
     
     def __init__(self):
         self.model = None
+        self.conf = float(os.getenv("OFFSIDE_YOLO_CONF", "0.25"))
         if YOLO_AVAILABLE:
             try:
                 self.model = YOLO('yolov8n.pt')
@@ -105,7 +107,7 @@ class PlayerDetector:
         players = []
         
         if self.model:
-            results = self.model(frame, verbose=False, conf=0.3)
+            results = self.model(frame, verbose=False, conf=self.conf)
             
             for r in results:
                 for box in r.boxes:
@@ -198,8 +200,10 @@ class OffsideDetector:
         self.player_detector = PlayerDetector()
         self.ball_tracker = BallTracker()
         self.attack_direction = attack_direction  # 1 = right, -1 = left (can be set explicitly)
-        self.min_players_for_offside = 6  # Need at least 6 players visible for valid offside check
-        self.min_player_spread = 0.5  # Players must span at least 50% of frame width
+        # Thresholds configurable via env (more permissive defaults)
+        self.min_players_for_offside = int(os.getenv("OFFSIDE_MIN_PLAYERS", "4"))
+        self.min_player_spread = float(os.getenv("OFFSIDE_MIN_SPREAD", "0.35"))
+        self.min_grass_ratio = float(os.getenv("OFFSIDE_MIN_GRASS", "0.2"))
     
     def is_wide_view(self, players: List[dict], frame: np.ndarray) -> bool:
         """
@@ -225,8 +229,8 @@ class OffsideDetector:
         mask = cv2.inRange(hsv, green_lower, green_upper)
         grass_ratio = np.sum(mask > 0) / (width * height)
         
-        # Need at least 30% grass visible for wide field view
-        if grass_ratio < 0.3:
+        # Need enough grass visible for field view
+        if grass_ratio < self.min_grass_ratio:
             return False
         
         return True
@@ -394,7 +398,7 @@ class OffsideDetector:
         offside_candidates.sort(key=lambda x: x[1], reverse=True)
         suspect, margin = offside_candidates[0]
         
-        confidence = min(0.95, 0.65 + margin / 200)
+        confidence = min(0.95, 0.60 + margin / 220)
         
         return OffsideEvent(
             frame=frame_idx,
@@ -614,11 +618,11 @@ class OffsideVARAnalyzer:
         if not events:
             return []
         
-        # FIFA RULES - Only clear offside:
-        # 1. Attacker must be clearly ahead of second-to-last defender
-        # 2. Must have high confidence (>90%)
-        # 3. Must have significant margin (>60px)
-        events = [e for e in events if e.confidence >= 0.90 and e.margin >= 60]
+        # Configurable strictness
+        min_conf = float(os.getenv("OFFSIDE_GROUP_MIN_CONF", "0.85"))
+        min_margin = int(os.getenv("OFFSIDE_GROUP_MIN_MARGIN", "40"))
+        max_events = int(os.getenv("OFFSIDE_GROUP_MAX", "2"))
+        events = [e for e in events if e.confidence >= min_conf and e.margin >= min_margin]
         
         if not events:
             return []
@@ -646,9 +650,7 @@ class OffsideVARAnalyzer:
             best = max(group, key=lambda x: x.confidence)
             grouped.append(best)
         
-        # Sort by confidence, EXTREMELY strict threshold
-        grouped = sorted(grouped, key=lambda x: x.confidence, reverse=True)
-        grouped = [e for e in grouped if e.is_offside and e.confidence >= 0.92]
-        
-        # MAX 1 offside event per video (only the clearest one)
-        return grouped[:1]
+        # Sort by confidence, keep best up to max_events
+        grouped = sorted(grouped, key=lambda x: (x.confidence, x.margin), reverse=True)
+        grouped = [e for e in grouped if e.is_offside]
+        return grouped[:max_events]
