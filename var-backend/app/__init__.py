@@ -1,1 +1,0 @@
-"""VAR Backend Application"""

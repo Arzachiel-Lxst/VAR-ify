@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { Upload, Play, AlertTriangle, CheckCircle, Hand, Flag, Loader2, Video, Download, Info, Clock, Zap } from 'lucide-react'
 
-// API base URL - empty for production (same origin), localhost for dev
-const API_BASE = import.meta.env.DEV ? 'http://localhost:8000' : ''
+// API base URL from environment variable
+const API_BASE = import.meta.env.VITE_API_URL || ''
 
 function App() {
   const [file, setFile] = useState(null)
@@ -47,7 +47,7 @@ function App() {
 
     try {
       // Upload video
-      const uploadRes = await fetch('/api/upload', {
+      const uploadRes = await fetch(`${API_BASE}/api/upload`, {
         method: 'POST',
         body: formData
       })
@@ -59,7 +59,7 @@ function App() {
       setAnalyzing(true)
 
       // Analyze video
-      const analyzeRes = await fetch('/api/analyze', {
+      const analyzeRes = await fetch(`${API_BASE}/api/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ filename: uploadData.filename })

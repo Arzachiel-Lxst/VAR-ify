@@ -15,10 +15,14 @@ build/
 *.egg-info/
 
 # Data files (keep structure only)
-var-backend/data/uploads/*
-var-backend/data/results/*
-!var-backend/data/uploads/.gitkeep
-!var-backend/data/results/.gitkeep
+backend/data/uploads/*
+backend/data/results/*
+!backend/data/uploads/.gitkeep
+!backend/data/results/.gitkeep
+
+# Old folders (deprecated)
+var-backend/
+var-frontend/
 
 # Database
 *.db
