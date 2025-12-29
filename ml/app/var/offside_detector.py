@@ -484,8 +484,8 @@ class OffsideDetector:
             
             # FIFA RULE: Attacker is offside if ANY part of body that can score
             # is ahead of second-to-last defender when ball is played
-            # VERY STRICT: Require minimum 50px margin (clear offside only)
-            if min_dist < 150 and y_diff > 50:
+            # More sensitive: 20px margin for better detection
+            if min_dist < 200 and y_diff > 20:
                 margin = y_diff
                 confidence = min(0.95, 0.80 + margin / 100)
                 offside_candidates.append((attacker, margin, confidence, ax))

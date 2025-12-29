@@ -84,13 +84,13 @@ from app.var.offside_detector import OffsideVARAnalyzer
 def _analyze_handball(video_path: str):
     """Worker function for handball detection"""
     analyzer = ContactVARAnalyzer()
-    return analyzer.analyze(video_path, skip_frames=8)  # Skip 8 frames - FAST
+    return analyzer.analyze(video_path, skip_frames=2)  # Skip 2 frames - ACCURATE
 
 
 def _analyze_offside(video_path: str):
     """Worker function for offside detection"""
     analyzer = OffsideVARAnalyzer()
-    return analyzer.analyze(video_path, skip_frames=10)  # Skip 10 frames - FAST
+    return analyzer.analyze(video_path, skip_frames=3)  # Skip 3 frames - ACCURATE
 
 
 class VARSystem:

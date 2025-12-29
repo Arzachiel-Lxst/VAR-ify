@@ -247,11 +247,11 @@ class ContactDetector:
     def __init__(self):
         self.ball_tracker = BallTracker()
         self.hand_detector = HandDetector()
-        self.contact_distance = 25  # pixels - must be VERY close (reduced from 35)
+        self.contact_distance = 45  # pixels - increased for better detection
         self.prev_ball = None
-        self.min_ball_speed = 10  # Ball must be moving fast enough (increased from 5)
+        self.min_ball_speed = 3  # Ball must be moving (lowered for sensitivity)
         self.trajectory_history = []  # Track ball movement for validation
-        self.min_confidence = 0.72  # Minimum confidence for detection
+        self.min_confidence = 0.55  # Minimum confidence for detection (lowered)
     
     def detect_contact(self, frame: np.ndarray, frame_idx: int, fps: float) -> Optional[ContactEvent]:
         """
@@ -314,15 +314,12 @@ class ContactDetector:
             speed_score = min(1.0, speed / 20)  # Increased denominator
             trajectory_changed = self.ball_tracker.trajectory_changed()
             
-            # REQUIRE trajectory change for valid handball detection
-            if not trajectory_changed:
-                continue  # Skip if ball direction didn't change
+            # Trajectory change is a bonus, not required
+            trajectory_bonus = 0.15 if trajectory_changed else 0.0
             
-            trajectory_bonus = 0.20  # Bonus for deflection
-            
-            # Stricter scoring - require very close distance
-            if dist > 20:  # If not very close, reduce confidence significantly
-                dist_score *= 0.5
+            # Distance bonus for very close contact
+            if dist < 20:
+                dist_score *= 1.2  # Boost for very close
             
             contact_score = (
                 dist_score * 0.50 +
