@@ -15,6 +15,11 @@ RUN apt-get update && apt-get install -y \
 
 # Copy requirements first for caching
 COPY requirements.txt .
+
+# Install numpy first (required by lap package during build)
+RUN pip install --no-cache-dir numpy==1.26.3
+
+# Install remaining requirements
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
