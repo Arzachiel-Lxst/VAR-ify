@@ -26,9 +26,6 @@ tests/
 test_*.py
 *_test.py
 
-# Exclude full requirements (use railway version)
-requirements.txt
-
 # Exclude local development files
 docker-compose.yml
 Dockerfile.local
