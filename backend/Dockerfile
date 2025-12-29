@@ -9,14 +9,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
-# Copy requirements
-COPY requirements.txt .
+# Copy requirements from backend folder (Railway uses root as context)
+COPY backend/requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
-COPY . .
+# Copy backend application code
+COPY backend/ .
 
 # Create data directories
 RUN mkdir -p data/uploads data/results
