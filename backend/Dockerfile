@@ -21,8 +21,11 @@ COPY . .
 # Create data directories
 RUN mkdir -p data/uploads data/results
 
-# Expose port
+# Expose port (Railway uses dynamic PORT)
 EXPOSE 8000
 
-# Run the API server
-CMD ["uvicorn", "api_server:app", "--host", "0.0.0.0", "--port", "8000"]
+# Environment variable for port
+ENV PORT=8000
+
+# Run the API server with dynamic port
+CMD uvicorn api_server:app --host 0.0.0.0 --port $PORT
