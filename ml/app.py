@@ -8,10 +8,8 @@ import tempfile
 import gradio as gr
 from pathlib import Path
 
-# Import VAR analyzers
-from app.var.handball_detector import HandballVARAnalyzer
-from app.var.offside_detector import OffsideVARAnalyzer
-from run_var import VARAnalyzer
+# Import VAR system
+from run_var import VARSystem
 
 # Initialize analyzer
 analyzer = None
@@ -19,7 +17,7 @@ analyzer = None
 def get_analyzer():
     global analyzer
     if analyzer is None:
-        analyzer = VARAnalyzer(output_dir="results")
+        analyzer = VARSystem(output_dir="results")
     return analyzer
 
 
@@ -43,28 +41,39 @@ def analyze_video(video_file, analysis_type="both"):
         # Run analysis
         results = var.analyze(
             video_path=video_file,
-            check_handball=(analysis_type in ["handball", "both"]),
-            check_offside=(analysis_type in ["offside", "both"]),
             create_video=True
         )
         
-        # Format results
+        # Format results based on analysis_type
+        handball_events = results.get("handball", [])
+        offside_events = results.get("offside", [])
+        
+        if analysis_type == "handball":
+            offside_events = []
+        elif analysis_type == "offside":
+            handball_events = []
+        
+        # Format output
         output = {
             "status": "completed",
-            "handball_events": len(results.get("handball_events", [])),
-            "offside_events": len(results.get("offside_events", [])),
-            "violations_found": results.get("handball_events", []) + results.get("offside_events", []),
-            "video_url": results.get("video_url")
+            "handball_events": len(handball_events),
+            "offside_events": len(offside_events),
+            "handball_details": handball_events,
+            "offside_details": offside_events,
+            "summary": results.get("summary", {})
         }
         
-        video_path = results.get("video_url")
-        if video_path and os.path.exists(video_path):
+        # Find output video
+        video_stem = Path(video_file).stem
+        video_path = f"results/{video_stem}_VAR.mp4"
+        if os.path.exists(video_path):
             return output, video_path
         
         return output, None
         
     except Exception as e:
-        return {"error": str(e)}, None
+        import traceback
+        return {"error": str(e), "traceback": traceback.format_exc()}, None
 
 
 def create_interface():
