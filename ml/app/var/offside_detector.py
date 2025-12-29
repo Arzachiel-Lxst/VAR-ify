@@ -8,6 +8,11 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple
 from pathlib import Path
 import os
+try:
+    from app.core.soccernet import estimate_offside_line
+    SOCCERNET_AVAILABLE = True
+except Exception:
+    SOCCERNET_AVAILABLE = False
 
 try:
     from ultralytics import YOLO
@@ -35,9 +40,10 @@ class PlayerDetector:
     def __init__(self):
         self.model = None
         self.conf = float(os.getenv("OFFSIDE_YOLO_CONF", "0.25"))
+        self.model_name = os.getenv("OFFSIDE_YOLO_MODEL", "yolov8n.pt")
         if YOLO_AVAILABLE:
             try:
-                self.model = YOLO('yolov8n.pt')
+                self.model = YOLO(self.model_name)
                 self.model.verbose = False
             except:
                 pass
@@ -373,7 +379,12 @@ class OffsideDetector:
         offside_line = self.detect_offside_line(defenders_team)
         
         if offside_line < 0:
-            return None
+            if SOCCERNET_AVAILABLE and os.getenv("SOCCERNET_ENABLED", "0") == "1":
+                line_y = estimate_offside_line(frame, self.attack_direction)
+                if line_y >= 0:
+                    offside_line = line_y
+                else:
+                    return None
         
         ball_x = ball_pos[0]
         
