@@ -1,10 +1,10 @@
 """
 VAR-ify Backend API
-Lightweight API for Railway deployment
-ML processing via Hugging Face Spaces
+Combined API with integrated ML processing
 """
 import os
 import re
+import sys
 import uuid
 import shutil
 import subprocess
@@ -15,10 +15,21 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-import httpx
+
+# Add ml folder to path for imports
+ML_PATH = Path(__file__).parent.parent / "ml"
+sys.path.insert(0, str(ML_PATH))
+
+# Import VAR system from ml folder
+try:
+    from run_var import VARSystem
+    ML_AVAILABLE = True
+    print("[Backend] ML system loaded successfully")
+except ImportError as e:
+    ML_AVAILABLE = False
+    print(f"[Backend] ML system not available: {e}")
 
 # Configuration
-HF_SPACE_URL = os.getenv("HF_SPACE_URL", "")
 MAX_VIDEO_DURATION = 15
 
 app = FastAPI(
@@ -80,7 +91,7 @@ async def root():
 
 @app.get("/api/health")
 async def health_check():
-    return {"status": "healthy", "service": "VAR-ify API", "ml_service": HF_SPACE_URL or "not configured"}
+    return {"status": "healthy", "service": "VAR-ify API", "ml_available": ML_AVAILABLE}
 
 
 @app.post("/api/upload")
@@ -118,12 +129,14 @@ async def upload_video(video: UploadFile = File(...)):
             "video_id": video_id,
             "filename": final_filename,
             "size": file_path.stat().st_size,
-            "duration": min(duration, MAX_VIDEO_DURATION),
+            "duration": min(duration, MAX_VIDEO_DURATION) if duration > 0 else 15,
             "trimmed": was_trimmed,
-            "message": "Video uploaded. Use ML service for analysis.",
-            "ml_service": HF_SPACE_URL or "Configure HF_SPACE_URL env var"
+            "message": "Video uploaded successfully",
+            "ml_available": ML_AVAILABLE
         }
     except Exception as e:
+        import traceback
+        print(f"[Upload Error] {traceback.format_exc()}")
         if file_path.exists():
             os.remove(file_path)
         raise HTTPException(status_code=500, detail=str(e))
@@ -166,87 +179,79 @@ class AnalyzeRequest(BaseModel):
     filename: str
 
 
+# VAR system instance
+var_system = None
+
+def get_var_system():
+    global var_system
+    if var_system is None and ML_AVAILABLE:
+        var_system = VARSystem(output_dir=str(RESULTS_DIR))
+    return var_system
+
+
 @app.post("/api/analyze")
 async def analyze_video(request: AnalyzeRequest):
     """
-    Analyze video for VAR violations.
-    Calls Hugging Face ML service if configured, otherwise returns mock data.
+    Analyze video for VAR violations using integrated ML.
     """
-    import base64
-    
     file_path = UPLOAD_DIR / request.filename
     
     if not file_path.exists():
         raise HTTPException(status_code=404, detail=f"Video not found: {request.filename}")
     
-    # If HF_SPACE_URL is configured, call the ML service
-    if HF_SPACE_URL:
+    # Use integrated ML
+    if ML_AVAILABLE:
         try:
-            print(f"[Backend] Calling ML service: {HF_SPACE_URL}")
-            async with httpx.AsyncClient(timeout=300.0) as client:
-                # Upload video to HF Space for analysis
-                with open(file_path, "rb") as f:
-                    files = {"video": (request.filename, f, "video/mp4")}
-                    response = await client.post(
-                        f"{HF_SPACE_URL}/api/analyze",
-                        files=files
-                    )
-                
-                print(f"[Backend] ML response status: {response.status_code}")
-                
-                if response.status_code == 200:
-                    result = response.json()
-                    print(f"[Backend] ML result keys: {result.keys()}")
-                    
-                    # Save video from base64 if provided
-                    video_url = None
-                    if result.get("video_base64"):
-                        video_stem = file_path.stem
-                        result_video = f"{video_stem}_VAR.mp4"
-                        result_path = RESULTS_DIR / result_video
-                        
-                        # Decode and save video
-                        video_bytes = base64.b64decode(result["video_base64"])
-                        with open(result_path, "wb") as vf:
-                            vf.write(video_bytes)
-                        print(f"[Backend] Video saved: {result_path}")
-                        video_url = f"/results/{result_video}"
-                    
-                    return {
-                        "success": True,
-                        "filename": request.filename,
-                        "handball_events": result.get("handball_events", 0),
-                        "offside_events": result.get("offside_events", 0),
-                        "handball": result.get("handball", []),
-                        "offside": result.get("offside", []),
-                        "video_url": video_url,
-                        "summary": result.get("summary", {}),
-                        "source": "ml_service"
-                    }
-                else:
-                    print(f"[Backend] ML error response: {response.text}")
+            print(f"[VAR] Analyzing: {file_path}")
+            var = get_var_system()
+            results = var.analyze(str(file_path), create_video=True)
+            print(f"[VAR] Results: {results}")
+            
+            handball_events = results.get("handball", [])
+            offside_events = results.get("offside", [])
+            summary = results.get("summary", {})
+            
+            # Find result video
+            video_stem = file_path.stem
+            result_video = f"{video_stem}_VAR.mp4"
+            video_url = None
+            
+            if (RESULTS_DIR / result_video).exists():
+                video_url = f"/results/{result_video}"
+                print(f"[VAR] Video found: {video_url}")
+            
+            return {
+                "success": True,
+                "filename": request.filename,
+                "handball_events": len(handball_events),
+                "offside_events": len(offside_events),
+                "handball": handball_events,
+                "offside": offside_events,
+                "video_url": video_url,
+                "summary": summary,
+                "source": "integrated_ml"
+            }
         except Exception as e:
             import traceback
-            print(f"[Backend] ML service error: {traceback.format_exc()}")
+            print(f"[VAR] Error: {traceback.format_exc()}")
+            raise HTTPException(status_code=500, detail=str(e))
     
-    # Fallback: Return demo analysis result
-    video_stem = file_path.stem
-    result_video = f"{video_stem}_VAR.mp4"
-    
+    # Fallback: ML not available
     return {
-        "success": True,
+        "success": False,
         "filename": request.filename,
         "handball_events": 0,
         "offside_events": 0,
         "handball": [],
         "offside": [],
-        "video_url": f"/results/{result_video}" if (RESULTS_DIR / result_video).exists() else None,
+        "video_url": None,
         "summary": {"total_violations": 0},
-        "message": "Analysis complete. ML service not configured or failed - using demo mode.",
-        "source": "demo"
+        "message": "ML system not available",
+        "source": "none"
     }
 
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.getenv("PORT", 8001))
+    uvicorn.run(app, host="0.0.0.0", port=port)

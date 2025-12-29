@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { Upload, Play, AlertTriangle, CheckCircle, Hand, Flag, Loader2, Video, Download, Info, Clock, Zap } from 'lucide-react'
 
-// API base URL from environment variable
-const API_BASE = import.meta.env.VITE_API_URL || ''
+// API base URL - use localhost:8001 for local development
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8001'
 
 function App() {
   const [file, setFile] = useState(null)

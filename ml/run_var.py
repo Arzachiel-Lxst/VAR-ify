@@ -18,14 +18,20 @@ import multiprocessing as mp
 def convert_to_h264(input_path: str, output_path: str):
     """Convert video to H.264 for browser compatibility"""
     try:
-        subprocess.run([
+        result = subprocess.run([
             'ffmpeg', '-y', '-i', input_path,
             '-c:v', 'libx264', '-preset', 'ultrafast',
             '-c:a', 'aac', output_path
         ], capture_output=True, check=True)
-        return True
-    except:
-        return False
+        return Path(output_path).exists()
+    except Exception as e:
+        print(f"[FFmpeg] Conversion failed: {e}")
+        # Fallback: just copy the file
+        try:
+            shutil.copy(input_path, output_path)
+            return Path(output_path).exists()
+        except:
+            return False
 
 
 def extract_clip_with_text(video_path: str, output_path: str, start_sec: float, duration: float, text: str):
@@ -175,27 +181,16 @@ class VARSystem:
         # Create video with intro + highlights (ALWAYS create video)
         if create_video:
             video_output = self.output_dir / f"{video_path.stem}_VAR.mp4"
-            temp_output = self.output_dir / f"{video_path.stem}_VAR_temp.avi"
             print(f"\n🎬 Creating VAR video...")
             
-            # Create video with OpenCV (intro + clips)
-            self._create_var_video(str(video_path), handball_events, offside_events, str(temp_output))
+            # Create video with OpenCV directly to MP4
+            self._create_var_video(str(video_path), handball_events, offside_events, str(video_output))
             
-            # Convert to H.264 for browser
-            print("🔄 Converting to H.264...")
-            if convert_to_h264(str(temp_output), str(video_output)):
-                temp_output.unlink()
+            if video_output.exists():
                 size = video_output.stat().st_size / 1024 / 1024
-                print(f"✅ Video saved (H.264): {video_output} ({size:.1f} MB)")
+                print(f"✅ Video saved: {video_output} ({size:.1f} MB)")
             else:
-                # Fallback - try direct FFmpeg clip
-                print("⚠️ Conversion failed, trying direct clip...")
-                if handball_events:
-                    create_simple_var_clip(str(video_path), str(video_output), handball_events, "HANDBALL")
-                elif offside_events:
-                    create_simple_var_clip(str(video_path), str(video_output), offside_events, "OFFSIDE")
-                if temp_output.exists():
-                    temp_output.unlink()
+                print("⚠️ Video creation failed")
         
         # Print summary
         self._print_summary(result)
