@@ -27,14 +27,20 @@ VAR-ify/
 3. Note your Space URL
 
 ### 2. Backend (Railway)
-1. New Project → Deploy from GitHub
-2. Set root directory: `backend`
-3. Add env: `HF_SPACE_URL=https://your-space.hf.space`
+1. New Project → Deploy dari GitHub
+2. Root directory: `backend`
+3. Environment:
+   - `HF_SPACE_URL=https://your-space.hf.space`
+   - `FORCE_EXTERNAL_ML=1`
+   - `DATABASE_URL` sesuai kebutuhan (PostgreSQL/SQLite)
+4. FFmpeg tidak wajib di Railway jika memakai ML eksternal (HF Space)
 
 ### 3. Frontend (Vercel)
-1. Import from GitHub
-2. Set root directory: `frontend`
-3. Add env: `VITE_API_URL=https://your-backend.railway.app`
+1. Import dari GitHub
+2. Root directory: `frontend`
+3. Environment:
+   - `VITE_API_URL=https://your-backend.railway.app`
+4. Arahkan API ke backend Railway via `VITE_API_URL`
 
 ---
 
@@ -74,14 +80,16 @@ Sistem analisis video sepak bola berbasis AI untuk mendeteksi pelanggaran Handba
 
 **Backend:**
 ```bash
-cd var-backend
+cd backend
 pip install -r requirements.txt
+# Opsional: install ML deps agar mode terintegrasi aktif
+pip install -r ../ml/requirements.txt
 python api_server.py
 ```
 
 **Frontend:**
 ```bash
-cd var-frontend
+cd frontend
 npm install
 npm run dev
 ```
@@ -135,8 +143,9 @@ VAR-ify/
 
 ### Backend (.env)
 ```
+HF_SPACE_URL=https://your-space.hf.space
+FORCE_EXTERNAL_ML=1
 DATABASE_URL=sqlite:///./data/varify.db
-REDIS_URL=redis://localhost:6379
 ```
 
 ## 📝 API Endpoints

@@ -15,6 +15,8 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
+import base64
+import httpx
 
 # Add ml folder to path for imports
 ML_PATH = Path(__file__).parent.parent / "ml"
@@ -31,6 +33,8 @@ except ImportError as e:
 
 # Configuration
 MAX_VIDEO_DURATION = 15
+HF_SPACE_URL = os.getenv("HF_SPACE_URL")
+FORCE_EXTERNAL_ML = os.getenv("FORCE_EXTERNAL_ML", "0") == "1"
 
 app = FastAPI(
     title="VAR-ify API",
@@ -199,8 +203,8 @@ async def analyze_video(request: AnalyzeRequest):
     if not file_path.exists():
         raise HTTPException(status_code=404, detail=f"Video not found: {request.filename}")
     
-    # Use integrated ML
-    if ML_AVAILABLE:
+    use_integrated = ML_AVAILABLE and not FORCE_EXTERNAL_ML and not HF_SPACE_URL
+    if use_integrated:
         try:
             print(f"[VAR] Analyzing: {file_path}")
             var = get_var_system()
@@ -236,7 +240,44 @@ async def analyze_video(request: AnalyzeRequest):
             print(f"[VAR] Error: {traceback.format_exc()}")
             raise HTTPException(status_code=500, detail=str(e))
     
-    # Fallback: ML not available
+    if HF_SPACE_URL:
+        try:
+            print(f"[VAR] External ML: {HF_SPACE_URL}")
+            with open(file_path, "rb") as f:
+                files = {"video": (request.filename, f, "video/mp4")}
+                r = httpx.post(f"{HF_SPACE_URL}/api/analyze", files=files, timeout=180)
+            if r.status_code != 200:
+                raise HTTPException(status_code=502, detail=f"ML service error: {r.text}")
+            data = r.json()
+            handball_events = data.get("handball", [])
+            offside_events = data.get("offside", [])
+            summary = data.get("summary", {})
+            video_b64 = data.get("video_base64")
+            video_url = None
+            if video_b64:
+                out_name = f"{file_path.stem}_VAR.mp4"
+                out_path = RESULTS_DIR / out_name
+                with open(out_path, "wb") as vf:
+                    vf.write(base64.b64decode(video_b64))
+                if out_path.exists():
+                    video_url = f"/results/{out_name}"
+                    print(f"[VAR] External video saved: {video_url}")
+            return {
+                "success": True,
+                "filename": request.filename,
+                "handball_events": len(handball_events),
+                "offside_events": len(offside_events),
+                "handball": handball_events,
+                "offside": offside_events,
+                "video_url": video_url,
+                "summary": summary,
+                "source": "external_ml"
+            }
+        except Exception as e:
+            import traceback
+            print(f"[VAR] External error: {traceback.format_exc()}")
+            raise HTTPException(status_code=500, detail=str(e))
+    
     return {
         "success": False,
         "filename": request.filename,

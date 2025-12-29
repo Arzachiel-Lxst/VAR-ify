@@ -13,6 +13,7 @@ from dataclasses import asdict
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 import multiprocessing as mp
+import os
 
 
 def convert_to_h264(input_path: str, output_path: str):
@@ -160,6 +161,10 @@ class VARSystem:
         print(f"      ✅ OFFSIDE: {len(offside_events)} event(s)")
         
         # Prepare result
+        min_hand = float(os.getenv("MIN_HANDBALL_CONF", "0.6"))
+        min_off = float(os.getenv("MIN_OFFSIDE_CONF", "0.6"))
+        handball_events = [e for e in handball_events if getattr(e, "confidence", 0) >= min_hand]
+        offside_events = [e for e in offside_events if getattr(e, "confidence", 0) >= min_off]
         result = {
             "video": video_path.name,
             "analyzed_at": datetime.now().isoformat(),
@@ -185,6 +190,14 @@ class VARSystem:
             
             # Create video with OpenCV directly to MP4
             self._create_var_video(str(video_path), handball_events, offside_events, str(video_output))
+            
+            # Ensure browser-compatible H.264 + AAC
+            h264_path = self.output_dir / f"{video_path.stem}_VAR_h264.mp4"
+            if convert_to_h264(str(video_output), str(h264_path)):
+                try:
+                    shutil.move(str(h264_path), str(video_output))
+                except:
+                    pass
             
             if video_output.exists():
                 size = video_output.stat().st_size / 1024 / 1024
