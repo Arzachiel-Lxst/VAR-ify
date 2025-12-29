@@ -288,8 +288,9 @@ function App() {
                       <h4 className="text-white font-semibold">VAR Video</h4>
                       <button
                         onClick={() => {
+                          const videoUrl = resultVideo.startsWith('/') ? `${API_BASE}${resultVideo}` : `${API_BASE}/${resultVideo}`
                           const link = document.createElement('a')
-                          link.href = `${API_BASE}${resultVideo}`
+                          link.href = videoUrl
                           link.download = 'VAR_Result.mp4'
                           document.body.appendChild(link)
                           link.click()
@@ -302,7 +303,7 @@ function App() {
                       </button>
                     </div>
                     <video
-                      src={`${API_BASE}${resultVideo}`}
+                      src={resultVideo.startsWith('/') ? `${API_BASE}${resultVideo}` : `${API_BASE}/${resultVideo}`}
                       className="w-full rounded-lg"
                       controls
                     />
