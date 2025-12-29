@@ -79,7 +79,7 @@ def analyze_video(video_file, analysis_type="both"):
 def create_interface():
     """Create Gradio interface"""
     
-    with gr.Blocks(title="VAR-ify", theme=gr.themes.Dark()) as demo:
+    with gr.Blocks(title="VAR-ify", theme="dark") as demo:
         gr.Markdown("""
         # ⚽ VAR-ify - Video Assistant Referee
         
