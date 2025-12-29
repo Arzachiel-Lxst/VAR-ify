@@ -1,0 +1,12 @@
+# Soccer Object Detection Dataset
+# Auto-generated from video
+
+path: C:\Users\NITRO V15\CascadeProjects\var-backend\training\datasets\soccer
+train: images/train
+val: images/val
+
+nc: 2
+
+names:
+  0: ball
+  1: player

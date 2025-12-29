@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  # Backend API
+  backend:
+    build: ./var-backend
+    container_name: varify-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./var-backend/data:/app/data
+      - ./var-backend/models:/app/models
+    environment:
+      - DATABASE_URL=postgresql://varify:varify123@db:5432/varify
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - db
+      - redis
+    restart: unless-stopped
+
+  # Frontend
+  frontend:
+    build: ./var-frontend
+    container_name: varify-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: varify-db
+    environment:
+      - POSTGRES_USER=varify
+      - POSTGRES_PASSWORD=varify123
+      - POSTGRES_DB=varify
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
+  # Redis for caching/queue
+  redis:
+    image: redis:7-alpine
+    container_name: varify-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:

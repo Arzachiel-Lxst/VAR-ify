@@ -1,0 +1,17 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://your-backend-url.railway.app/api/:path*"
+    },
+    {
+      "source": "/results/:path*", 
+      "destination": "https://your-backend-url.railway.app/results/:path*"
+    }
+  ],
+  "build": {
+    "env": {
+      "VITE_API_URL": "https://your-backend-url.railway.app"
+    }
+  }
+}

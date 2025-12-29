@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment
+.env
+.env.local
+*.local
+
+# Build outputs
+dist/
+build/
+*.egg-info/
+
+# Data files (keep structure only)
+var-backend/data/uploads/*
+var-backend/data/results/*
+!var-backend/data/uploads/.gitkeep
+!var-backend/data/results/.gitkeep
+
+# Database
+*.db
+*.sqlite
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Models (large files)
+*.pt
+*.pth
+*.onnx
+
+# Temp files
+*.tmp
+*.temp
